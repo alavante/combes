@@ -75,7 +75,7 @@
     padding-bottom: 86px;
   }
 
-  /* Capa de Imagen / Diapositiva */
+  /* 1. Capa de Imagen */
   #media-image {
     max-width: 100%;
     max-height: 100%;
@@ -89,7 +89,7 @@
     opacity: 1;
   }
 
-  /* Capa de Vídeo (MP4 / WebM) */
+  /* 2. Capa de Vídeo */
   #media-video {
     max-width: 100%;
     max-height: 100%;
@@ -98,7 +98,7 @@
     outline: none;
   }
 
-  /* Capa de Documentos Multi-página (PDF / PPT) */
+  /* 3. Capa de Documentos (PDF / PPT) */
   #media-frame {
     width: 100%;
     height: 100%;
@@ -107,7 +107,6 @@
     background: #fff;
   }
 
-  /* Indicador discreto de página actual para PDFs / Diapositivas */
   #doc-page-badge {
     position: absolute;
     top: 20px; right: 25px;
@@ -124,7 +123,7 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.7);
   }
 
-  /* Fondo Institucional de Contingencia */
+  /* 4. Fondo Institucional de Contingencia */
   #media-fallback {
     display: flex;
     flex-direction: column;
@@ -258,7 +257,6 @@
     100% { transform: translateX(-50%); }
   }
 
-  /* PISTA DE MENSAJE O ALARMA ACTIVA (INYECCIÓN DESDE OOW) */
   #priority-banner {
     display: none;
     position: absolute;
@@ -363,13 +361,13 @@
     <!-- 1. Visor de Fotos / Imágenes -->
     <img id="media-image" alt="Carrusel Pasillo">
 
-    <!-- 2. Visor de Vídeo (MP4 / WebM) -->
+    <!-- 2. Visor de Vídeo -->
     <video id="media-video" autoplay muted playsinline></video>
 
     <!-- 3. Visor de Documentos Multi-página (PDF / PPT) -->
     <iframe id="media-frame"></iframe>
 
-    <!-- Badge de Página / Diapositiva actual (ej. PÁGINA 2 / 5) -->
+    <!-- Badge de Página actual -->
     <div id="doc-page-badge">PÁGINA 1</div>
 
     <!-- 4. Fondo Institucional de Contingencia -->
@@ -382,7 +380,7 @@
 
   </div>
 
-  <!-- BANDA INFERIOR: ESCUDO ATALANTA + HORA NAVAL + MARQUESINA -->
+  <!-- BANDA INFERIOR: ESCUDO ATALANTA + HORA MILITAR + MARQUESINA -->
   <div id="bottom-mast-bar">
     
     <!-- ESQUINA INFERIOR IZQUIERDA: ESCUDO OFICIAL EUNAVFOR ATALANTA (TOGGLE) -->
@@ -392,7 +390,7 @@
 
     <!-- HORA NAVAL LIMPIA (SIN SUBTEXTO) -->
     <div id="ship-clock-badge">
-      <div class="time-naval" id="naval-clock">21:00:00 C</div>
+      <div class="time-naval" id="naval-clock">21:35:00 C</div>
     </div>
 
     <!-- BARRA DE MENSAJES / CINTILLO -->
@@ -473,10 +471,8 @@
   let playlistIndex = 0;
   let slideTimer = null;
 
-  // Estado para documentos multi-página (PDF / PPT)
   let currentDocPage = 1;
   let currentDocTotalPages = 1;
-  let isMultiPageDoc = false;
 
   const imgEl = document.getElementById('media-image');
   const vidEl = document.getElementById('media-video');
@@ -490,13 +486,14 @@
     vidEl.pause();
     vidEl.style.display = 'none';
     frameEl.style.display = 'none';
+    frameEl.src = 'about:blank';
     pageBadge.style.display = 'none';
     fallbackEl.style.display = 'none';
   }
 
-  // 1. CARGA DE LISTA DE MEDIOS (DESDE lista.json)
-  // Soporta tanto cadenas simples ("archivo.pdf") como objetos enriquecidos ({ "file": "orden.pdf", "pages": 4 })
+  // 1. CARGA AUTOMÁTICA DE ARCHIVOS: AUTO-DESCUBRIMIENTO EN GITHUB O lista.json
   async function loadPlaylist() {
+    // Vía A: Primero intentamos leer lista.json si existe
     try {
       const resp = await fetch(repoPath + 'lista.json?t=' + Date.now());
       if (resp.ok) {
@@ -510,17 +507,56 @@
       }
     } catch (e) {}
 
-    // Fallback: Si no hay lista.json, probamos nombres habituales
+    // Vía B: Si no hay lista.json, AUTO-DESCUBRIMIENTO directo vía API de GitHub
+    // Detecta la organización y repo actuales (alavante/combes)
+    try {
+      const host = window.location.hostname;
+      if (host.includes('github.io')) {
+        const user = host.split('.')[0]; // alavante
+        const pathParts = window.location.pathname.split('/').filter(p => p.length > 0);
+        const repo = pathParts[0] || 'combes';
+        const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/repositorios/prueba`;
+        
+        const ghResp = await fetch(apiUrl);
+        if (ghResp.ok) {
+          const files = await ghResp.json();
+          if (Array.isArray(files)) {
+            const discovered = files
+              .map(f => f.name)
+              .filter(name => !name.startsWith('.') && name !== 'index.html' && name !== 'lista.json');
+            if (discovered.length > 0) {
+              playlist = discovered;
+              playlistIndex = 0;
+              playNextItem();
+              return;
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    // Vía C: Fallback directo a los archivos reales detectados
     playlist = [
-      'presentacion.pdf',
-      'diapositivas.pptx',
-      'foto1.jpg',
-      'video1.mp4'
+      'images.jpg',
+      'images (1).jpg',
+      'images (2).jpg',
+      'letras canciones militares.pdf',
+      '20260418 03 ls25.pptx'
     ];
+    playlistIndex = 0;
     playNextItem();
   }
 
-  function playNextItem() {
+  async function checkFileExists(url) {
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      return res.ok && res.status < 400;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function playNextItem() {
     clearTimeout(slideTimer);
     if (!playlist || playlist.length === 0) {
       showFallback();
@@ -530,7 +566,6 @@
     const rawItem = playlist[playlistIndex];
     playlistIndex = (playlistIndex + 1) % playlist.length;
 
-    // Normalizar si el elemento es un string o un objeto con número de páginas
     let filename = '';
     let definedPages = 0;
 
@@ -542,17 +577,28 @@
     }
 
     if (!filename) {
-      playNextItem();
+      showFallback();
       return;
     }
 
-    const fileUrl = repoPath + filename;
+    // Codificar URL para soportar nombres con espacios o caracteres especiales como "images (1).jpg"
+    const fileUrl = repoPath + encodeURIComponent(filename);
     const ext = filename.split('.').pop().toLowerCase();
+
+    // Comprobación previa de existencia para evitar 404
+    const exists = await checkFileExists(fileUrl);
+    if (!exists) {
+      if (playlist.length <= 1) {
+        showFallback();
+      } else {
+        playNextItem();
+      }
+      return;
+    }
 
     // A) VÍDEOS (MP4, WEBM, MOV)
     if (['mp4', 'webm', 'ogg', 'mov'].includes(ext)) {
       hideAllMedia();
-      isMultiPageDoc = false;
       vidEl.src = fileUrl;
       vidEl.style.display = 'block';
 
@@ -562,10 +608,9 @@
         slideTimer = setTimeout(playNextItem, slideDurationSec * 1000);
       });
 
-    // B) FOTOGRAFÍAS INDIVIDUALES (JPG, PNG, GIF, WEBP, SVG)
+    // B) FOTOGRAFÍAS (JPG, PNG, GIF, WEBP, SVG)
     } else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
       hideAllMedia();
-      isMultiPageDoc = false;
       const testImg = new Image();
       testImg.onload = () => {
         imgEl.src = fileUrl;
@@ -579,26 +624,20 @@
     // C) DOCUMENTOS MULTI-PÁGINA: PDF NATIVO
     } else if (ext === 'pdf') {
       hideAllMedia();
-      isMultiPageDoc = true;
       currentDocPage = 1;
-      // Si se definió en lista.json se usa, sino se asume pase automático de páginas
       currentDocTotalPages = definedPages > 0 ? definedPages : 10;
       renderPdfPageSequence(fileUrl);
 
     // D) PRESENTACIONES POWERPOINT (.PPT / .PPTX)
     } else if (['ppt', 'pptx'].includes(ext)) {
       hideAllMedia();
-      isMultiPageDoc = true;
       currentDocPage = 1;
       currentDocTotalPages = definedPages > 0 ? definedPages : 8;
 
       if (window.location.protocol.startsWith('http')) {
         const absoluteUrl = new URL(fileUrl, window.location.href).href;
-        // Office Online Web Viewer soporta pase o visualización interactiva
         frameEl.src = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(absoluteUrl);
         frameEl.style.display = 'block';
-        
-        // Si tiene definidas varias diapositivas, programa la duración total proporcional
         const totalDuration = (definedPages > 0 ? definedPages : 1) * slideDurationSec;
         slideTimer = setTimeout(playNextItem, totalDuration * 1000);
       } else {
@@ -610,7 +649,6 @@
     }
   }
 
-  // 3. SECUENCIADOR AUTOMÁTICO DE PÁGINAS PDF (1 a N CON PAUSA PREPROGRAMADA)
   function renderPdfPageSequence(fileUrl) {
     frameEl.style.display = 'block';
     loadPdfPage(fileUrl, currentDocPage);
@@ -618,10 +656,8 @@
     slideTimer = setTimeout(() => {
       currentDocPage++;
       if (currentDocPage <= currentDocTotalPages) {
-        // Carga la siguiente página del mismo PDF
         renderPdfPageSequence(fileUrl);
       } else {
-        // Documento PDF completado: pasa al siguiente elemento de la lista
         pageBadge.style.display = 'none';
         playNextItem();
       }
@@ -629,7 +665,6 @@
   }
 
   function loadPdfPage(fileUrl, pageNum) {
-    // Hash estándar RFC 3778 y visor Chromium para seleccionar página exacta: #page=N
     frameEl.src = fileUrl + '#page=' + pageNum + '&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
     pageBadge.innerText = 'PÁGINA ' + pageNum;
     pageBadge.style.display = 'block';
@@ -655,7 +690,7 @@
 
   loadPlaylist();
 
-  // 4. SINCRONIZACIÓN EN TIEMPO REAL CON LA CONSOLA DEL OOW
+  // 2. SINCRONIZACIÓN EN TIEMPO REAL CON LA CONSOLA DEL OOW
   const syncChannel = new BroadcastChannel('combes_naval_net');
   syncChannel.onmessage = (event) => {
     const data = event.data;
@@ -678,7 +713,7 @@
     }
   });
 
-  // 5. TOGGLE AJUSTES EN EL ESCUDO
+  // 3. TOGGLE AJUSTES EN EL ESCUDO
   function toggleConfigModal() {
     const modal = document.getElementById('config-modal');
     modal.style.display = (modal.style.display === 'block') ? 'none' : 'block';
@@ -702,7 +737,7 @@
     updateNavalClock();
   }
 
-  // 6. RELOJ NAVAL REGLAMENTARIO (HH:MM:SS Letra Huso)
+  // 4. RELOJ NAVAL REGLAMENTARIO (HH:MM:SS Letra Huso)
   function updateNavalClock() {
     const now = new Date();
     const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -715,7 +750,7 @@
   setInterval(updateNavalClock, 1000);
   updateNavalClock();
 
-  // 7. CONTROL DE MARQUESINA Y ÓRDENES
+  // 5. CONTROL DE MARQUESINA Y ÓRDENES
   function showOrder(level, tag, text) {
     const banner = document.getElementById('priority-banner');
     const bannerTag = document.getElementById('banner-tag');
