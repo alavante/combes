@@ -1,1 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMBÉS - Consola de Mando OOW (Officer of the Watch)</title>
+<style>
+  :root {
+    --navy-dark: #070d18;
+    --navy-blue: #0f1c30;
+    --gold: #d4af37;
+    --gold-bright: #ffd700;
+    --red-p1: #b30000;
+    --amber-p2: #d97706;
+    --blue-p3: #1d4ed8;
+    --text-light: #f8fafc;
+    --text-muted: #94a3b8;
+  }
 
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body, html {
+    width: 100%;
+    min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #060b13;
+    color: #fff;
+    padding: 20px;
+  }
+
+  .oow-container {
+    max-width: 680px;
+    margin: 0 auto;
+    background: rgba(11, 20, 36, 0.98);
+    border: 2px solid var(--gold);
+    border-radius: 10px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.85);
+    overflow: hidden;
+  }
+
+  /* CABECERA MILITAR OOW */
+  .oow-header {
+    background: linear-gradient(135deg, #002266, #0a1322);
+    border-bottom: 2px solid var(--gold);
+    padding: 16px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .oow-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .oow-title-text {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--gold-bright);
+    text-transform: uppercase;
+  }
+  .oow-sub {
+    font-size: 11px;
+    color: #cbd5e1;
+    letter-spacing: 1px;
+  }
+  .crest-mini {
+    width: 44px;
+    height: 44px;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6));
+  }
+
+  .oow-clock-box {
+    text-align: right;
+  }
+  .clock-digital {
+    font-size: 19px;
+    font-weight: 800;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .clock-tag {
+    font-size: 10px;
+    color: var(--gold-bright);
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  /* CUERPO DE LA CONSOLA */
+  .oow-body {
+    padding: 22px;
+  }
+
+  .section-card {
+    background: #0d1726;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 18px;
+  }
+  .section-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: var(--gold);
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* TEXTO LIBRE */
+  .free-text-area {
+    width: 100%;
+    height: 80px;
+    background: #070d18;
+    border: 1px solid #334155;
+    color: #fff;
+    font-size: 14px;
+    padding: 10px;
+    border-radius: 6px;
+    resize: none;
+    font-family: inherit;
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  .free-text-area:focus {
+    outline: none;
+    border-color: var(--gold-bright);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+  }
+
+  /* BARRA DE CUENTA ATRÁS */
+  .timer-banner {
+    background: #0a1b33;
+    border: 1px solid #38bdf8;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .timer-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: bold;
+    color: #7dd3fc;
+    margin-bottom: 6px;
+  }
+  .timer-track {
+    width: 100%;
+    height: 8px;
+    background: #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%;
+    width: 100%;
+    background: #38bdf8;
+    transition: width 1s linear;
+  }
+
+  /* BOTONERA */
+  .btn-group {
+    display: flex;
+    gap: 8px;
+  }
+  .btn {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #fff;
+  }
+  .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn:active { transform: translateY(1px); }
+
+  .btn-send { background: #0284c7; border-color: #38bdf8; }
+  .btn-fixed { background: #b45309; border-color: #f59e0b; }
+  .btn-stop { background: #dc2626; border-color: #ef4444; }
+
+  /* ALARMA GENERAL DE DOTACIÓN */
+  .alarm-container {
+    background: #250b0e;
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 18px;
+  }
+  .select-military, .input-military {
+    width: 100%;
+    padding: 8px 12px;
+    background: #130709;
+    border: 1px solid #7f1d1d;
+    color: #fecaca;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 10px;
+    font-family: inherit;
+  }
+
+  .status-toast {
+    background: #064e3b;
+    border: 1px solid #10b981;
+    color: #a7f3d0;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 10px;
+    display: none;
+    text-align: center;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<div class="oow-container">
+  
+  <!-- CABECERA DE LA CONSOLA DEL OFICIAL DE GUARDIA -->
+  <div class="oow-header">
+    <div class="oow-title">
+      <!-- ESCUDO ATALANTA MINIATURA -->
+      <svg class="crest-mini" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill="#003399" stroke="#d4af37" stroke-width="2.5"/>
+        <path d="M 38 35 Q 46 32 56 35 Q 67 37 72 46 Q 75 55 65 60 Q 58 63 55 73 Q 47 71 43 65 Q 36 58 38 35 Z" fill="#0a1a38" stroke="#ffd700" stroke-width="1.2"/>
+        <line x1="30" y1="70" x2="70" y2="30" stroke="#ffd700" stroke-width="3" stroke-linecap="round"/>
+        <line x1="50" y1="30" x2="50" y2="68" stroke="#ffffff" stroke-width="2"/>
+        <circle cx="50" cy="27" r="3.5" fill="none" stroke="#ffffff" stroke-width="1.8"/>
+        <path d="M 39 57 Q 50 70 61 57" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="oow-title-text">COMBÉS • CONSOLA OOW</div>
+        <div class="oow-sub">OFICIAL DE GUARDIA • EUNAVFOR ATALANTA</div>
+      </div>
+    </div>
+    <div class="oow-clock-box">
+      <div class="clock-digital" id="oow-clock">19:48:00 C</div>
+      <div class="clock-tag">ENLACE PANTALLAS OK</div>
+    </div>
+  </div>
+
+  <div class="oow-body">
+
+    <!-- SECCIÓN 1: TEXTO LIBRE CON CUENTA ATRÁS 30s / DEJAR FIJO / PARAR -->
+    <div class="section-card">
+      <div class="section-label">
+        <span>✏️</span> EMISIÓN DE TEXTO LIBRE (MANDO)
+      </div>
+      <textarea class="free-text-area" id="free-text-input" placeholder="Escriba aquí la orden o aviso para las pantallas de pasillo..."></textarea>
+      
+      <!-- BARRA DE CUENTA ATRÁS -->
+      <div class="timer-banner" id="timer-box">
+        <div class="timer-row">
+          <span id="timer-title">EMITIENDO EN PANTALLAS (AUTO-PARADA EN 30s)</span>
+          <span id="timer-number">30s</span>
+        </div>
+        <div class="timer-track">
+          <div class="timer-fill" id="timer-bar"></div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-send" onclick="sendFreeText()">
+          <span>📤</span> Enviar (30s)
+        </button>
+        <button class="btn btn-fixed" onclick="setFixed()">
+          <span>📌</span> Dejar Fijo
+        </button>
+        <button class="btn btn-stop" onclick="stopEmission()">
+          <span>⏹</span> Parar Emisión
+        </button>
+      </div>
+      <div class="status-toast" id="toast-msg"></div>
+    </div>
+
+    <!-- SECCIÓN 2: ALARMA GENERAL DE DOTACIÓN CON REGISTRO DE AUTOR -->
+    <div class="alarm-container">
+      <div class="section-label" style="color:#f87171;">
+        <span>🚨</span> ALARMA GENERAL DE DOTACIÓN
+      </div>
+      <label style="font-size:11px; color:#cbd5e1; display:block; margin-bottom:4px;">Tipo de Emergencia:</label>
+      <select class="select-military" id="alarm-type">
+        <option value="🌊 ¡HOMBRE AL AGUA POR LA BANDA DE BABOR!">🌊 Hombre al Agua (Banda de Babor)</option>
+        <option value="🌊 ¡HOMBRE AL AGUA POR LA BANDA DE ESTRIBOR!">🌊 Hombre al Agua (Banda de Estribor)</option>
+        <option value="🔥 ¡FUEGO EN CUBIERTA 3 - SOLLADO 4!">🔥 Fuego / Humo a bordo</option>
+        <option value="💧 ¡VÍA DE AGUA EN COMPARTIMENTO DE MÁQUINAS!">💧 Inundación / Vía de Agua</option>
+        <option value="🚑 ¡EMERGENCIA MÉDICA / ACCIDENTE GRAVE EN CUBIERTA!">🚑 Accidente Grave / Médico</option>
+      </select>
+
+      <label style="font-size:11px; color:#cbd5e1; display:block; margin-bottom:4px;">Identidad del Emisor (Auditoría Naval):</label>
+      <input type="text" class="input-military" id="alarm-user" value="Oficial de Guardia (Puente de Mando)">
+
+      <button class="btn" style="width:100%; background:#b91c1c; border-color:#ef4444; font-size:13px; font-weight:800; padding:12px;" onclick="triggerAlarm()">
+        🚨 ACTIVAR ALARMA EN PANTALLAS DE PASILLO
+      </button>
+    </div>
+
+    <!-- SECCIÓN 3: DISPAROS RÁPIDOS DEL RÉGIMEN INTERIOR -->
+    <div class="section-card">
+      <div class="section-label">
+        <span>⏱</span> DISPAROS RÁPIDOS DE RÉGIMEN
+      </div>
+      <div class="btn-group">
+        <button class="btn" style="background:#1e3a8a; border-color:#3b82f6;" onclick="sendQuickOrder('P3', 'P3 • RÉGIMEN', 'Atención dotación, lectura de la Orden del Día a las 08:30.')">
+          P3 Orden Diaria
+        </button>
+        <button class="btn" style="background:#0369a1; border-color:#38bdf8;" onclick="sendQuickOrder('P3', 'P3 • FAJINA', 'Atención dotación, fajina en 15 minutos.')">
+          P3 Fajina
+        </button>
+        <button class="btn" style="background:#854d0e; border-color:#f59e0b;" onclick="sendQuickOrder('P2', 'P2 • MANIOBRA', '¡Atención a la maniobra de aproximación a puerto!')">
+          P2 Maniobra
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  let timerInterval = null;
+  let remainingSec = 30;
+  let isFixed = false;
+  let currentZoneLetter = 'C';
+  let zoneOffsetHours = 3;
+
+  // CANAL DE COMUNICACIÓN EN TIEMPO REAL CON PANTALLAS DE PASILLO
+  const syncChannel = new BroadcastChannel('combes_naval_net');
+
+  function updateClock() {
+    const now = new Date();
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const targetTime = new Date(utcTime + (3600000 * zoneOffsetHours));
+    const h = String(targetTime.getHours()).padStart(2, '0');
+    const m = String(targetTime.getMinutes()).padStart(2, '0');
+    const s = String(targetTime.getSeconds()).padStart(2, '0');
+    document.getElementById('oow-clock').innerText = `${h}:${m}:${s} ${currentZoneLetter}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast-msg');
+    toast.innerText = msg;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 4000);
+  }
+
+  // 1. ENVIAR TEXTO LIBRE (CON CUENTA ATRÁS DE 30s)
+  function sendFreeText() {
+    const text = document.getElementById('free-text-input').value.trim();
+    if (!text) {
+      alert('Introduzca primero el texto para la dotación.');
+      return;
+    }
+
+    // Emitir al canal de las pantallas
+    dispatchToScreens('P3', 'P3 • ORDEN OOW', text);
+
+    // Iniciar temporizador de 30 segundos
+    isFixed = false;
+    remainingSec = 30;
+    const box = document.getElementById('timer-box');
+    const fill = document.getElementById('timer-bar');
+    const title = document.getElementById('timer-title');
+    const num = document.getElementById('timer-number');
+
+    box.style.display = 'block';
+    fill.style.width = '100%';
+    fill.style.background = '#38bdf8';
+    title.innerText = 'EMITIENDO EN PANTALLAS (AUTO-PARADA EN 30s)';
+    num.innerText = remainingSec + 's';
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      if (isFixed) return;
+      remainingSec--;
+      num.innerText = remainingSec + 's';
+      fill.style.width = ((remainingSec / 30) * 100) + '%';
+
+      if (remainingSec <= 0) {
+        clearInterval(timerInterval);
+        stopEmission();
+      }
+    }, 1000);
+
+    showToast('Orden transmitida a todas las pantallas de pasillo.');
+  }
+
+  // 2. DEJAR FIJO
+  function setFixed() {
+    const text = document.getElementById('free-text-input').value.trim();
+    if (!text) return;
+    isFixed = true;
+    clearInterval(timerInterval);
+
+    const box = document.getElementById('timer-box');
+    const fill = document.getElementById('timer-bar');
+    const title = document.getElementById('timer-title');
+    const num = document.getElementById('timer-number');
+
+    box.style.display = 'block';
+    fill.style.width = '100%';
+    fill.style.background = '#f59e0b';
+    title.innerText = 'EMISIÓN FIJA ACTIVA (SIN LÍMITE DE TIEMPO)';
+    num.innerText = 'FIJO';
+
+    showToast('Emisión fijada de forma permanente.');
+  }
+
+  // 3. PARAR EMISIÓN
+  function stopEmission() {
+    clearInterval(timerInterval);
+    isFixed = false;
+    document.getElementById('timer-box').style.display = 'none';
+
+    // Notificar a las pantallas que vuelvan a reposo
+    syncChannel.postMessage({ action: 'STOP_ORDER' });
+    localStorage.removeItem('combes_active_order');
+
+    showToast('Emisión finalizada. Pantallas en modo reposo.');
+  }
+
+  // 4. DISPARAR ALARMA GENERAL
+  function triggerAlarm() {
+    stopEmission();
+    const type = document.getElementById('alarm-type').value;
+    const user = document.getElementById('alarm-user').value;
+    const timeStr = document.getElementById('oow-clock').innerText;
+
+    const fullMsg = `${type} — [Emisor: ${user} • ${timeStr}]`;
+    dispatchToScreens('P1', '🚨 ALARMA GENERAL', fullMsg);
+    showToast('¡ALARMA GENERAL EMITIDA A TODAS LAS PANTALLAS!');
+  }
+
+  // 5. DISPAROS RÁPIDOS
+  function sendQuickOrder(level, tag, text) {
+    document.getElementById('free-text-input').value = text;
+    sendFreeText();
+  }
+
+  // ENVÍO DUAL: BroadcastChannel + localStorage
+  function dispatchToScreens(level, tag, text) {
+    const payload = { action: 'INJECT_ORDER', level, tag, text };
+    syncChannel.postMessage(payload);
+    localStorage.setItem('combes_active_order', JSON.stringify({ level, tag, text, timestamp: Date.now() }));
+  }
+</script>
+
+</body>
+</html>
