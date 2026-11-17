@@ -307,7 +307,7 @@
     <!-- HORA NAVAL REGLAMENTARIA: HH:MM:SS Letra Huso -->
     <div id="ship-clock-badge">
       <div class="time-naval" id="naval-clock">20:20:00 C</div>
-      <div class="time-zone-sub" id="nav-zone-label">HORA CHARLIE (+3)</div>
+      
     </div>
 
     <!-- BARRA DE MENSAJES / CINTILLO -->
@@ -437,7 +437,7 @@
     else if (zone === 'Z') zoneOffsetHours = 0;
     else if (zone === 'A') zoneOffsetHours = 1;
     else if (zone === 'B') zoneOffsetHours = 2;
-    document.getElementById('nav-zone-label').innerText = `HORA HUSO (${zone})`;
+    // nav-zone-label removed
     updateNavalClock();
   }
 
