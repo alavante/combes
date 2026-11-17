@@ -1,1 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMBÉS - Pantalla Pasillo (EUNAVFOR ATALANTA)</title>
+<style>
+  :root {
+    --navy-dark: #070d18;
+    --navy-blue: #0f1c30;
+    --gold: #d4af37;
+    --gold-bright: #ffd700;
+    --red-p1: #b30000;
+    --amber-p2: #d97706;
+    --blue-p3: #1d4ed8;
+    --eu-blue: #003399;
+  }
 
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #000;
+    color: #fff;
+  }
+
+  #screen-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #000;
+  }
+
+  /* STAND-BY / PANTALLA APAGADA */
+  #standby-screen {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #000;
+    z-index: 99999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+  #standby-screen .wake-hint {
+    margin-top: 15px;
+    font-size: 11px;
+    color: #334155;
+    border: 1px solid #1e293b;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #standby-screen .wake-hint:hover { color: #94a3b8; border-color: #475569; }
+
+  /* ========================================================= */
+  /* FONDO: VÍDEO YOUTUBE EN BUCLE INFINITO (PRUEBAS COMBÉS)   */
+  /* ========================================================= */
+  #video-wrapper {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1;
+    overflow: hidden;
+    background: #000;
+  }
+
+  /* Iframe escalado para cubrir toda la pantalla sin bordes negros */
+  #yt-player {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 100vw;
+    height: 56.25vw; /* 16:9 */
+    min-height: 100vh;
+    min-width: 177.77vh; /* 16:9 */
+    transform: translate(-50%, -50%);
+    pointer-events: none; /* Evita que el usuario pause el vídeo en el pasillo */
+    border: none;
+  }
+
+  /* Capa sutil de gradiente para dar contraste a la marquesina inferior */
+  #video-shade {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 2;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+  }
+
+  /* ========================================================= */
+  /* BANDA INFERIOR: ESCUDO ATALANTA + HORA NAVAL + MARQUESINA */
+  /* ========================================================= */
+  #bottom-mast-bar {
+    position: absolute;
+    bottom: 0; left: 0; width: 100%;
+    height: 84px;
+    z-index: 10;
+    display: flex;
+    align-items: stretch;
+    background: rgba(7, 13, 24, 0.94);
+    border-top: 2px solid var(--gold);
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+  }
+
+  /* 1. ESQUINA INFERIOR IZQUIERDA: ESCUDO EUNAVFOR ATALANTA (TOGGLE) */
+  #unit-crest-container {
+    width: 90px;
+    min-width: 90px;
+    background: linear-gradient(135deg, #002266, #070d18);
+    border-right: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+  #unit-crest-container:hover { background: #003399; }
+  #unit-crest-container:active .crest-svg { transform: scale(0.92); }
+  .crest-svg {
+    width: 68px;
+    height: 68px;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.7));
+    transition: transform 0.2s;
+  }
+
+  /* 2. HORA NAVAL: HH:MM:SS Letra Huso */
+  #ship-clock-badge {
+    background: #0a1322;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid rgba(212, 175, 55, 0.3);
+    min-width: 175px;
+  }
+  .time-naval {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+  }
+  .time-zone-sub {
+    font-size: 11px;
+    color: var(--gold-bright);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* 3. BARRA DE MENSAJES / CINTILLO */
+  #marquee-track-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+
+  #normal-ticker {
+    display: flex;
+    white-space: nowrap;
+    will-change: transform;
+    animation: scroll-left 42s linear infinite;
+    font-size: 19px;
+    font-weight: 500;
+    color: #e2e8f0;
+    padding-left: 20px;
+  }
+  .ticker-bullet {
+    color: var(--gold-bright);
+    margin: 0 18px;
+    font-weight: bold;
+  }
+
+  @keyframes scroll-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* PISTA DE MENSAJE O ALARMA ACTIVA (INYECCIÓN DESDE OOW) */
+  #priority-banner {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 12;
+    align-items: center;
+    padding: 0 25px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+  }
+  .p-tag {
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    margin-right: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    text-transform: uppercase;
+  }
+  .p-text {
+    font-size: 22px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .state-p3 { background: linear-gradient(90deg, #1e3a8a, #172554) !important; color: #fff; border-top: 2px solid #60a5fa; }
+  .state-p3 .p-tag { background: #3b82f6; color: #fff; }
+
+  .state-p2 { background: linear-gradient(90deg, #9a3412, #451a03) !important; color: #ffedd5; border-top: 2px solid #f59e0b; animation: pulse-amber 1.5s infinite; }
+  .state-p2 .p-tag { background: #f59e0b; color: #000; }
+
+  .state-p1-bar {
+    background: linear-gradient(90deg, #b91c1c, #7f1d1d) !important;
+    color: #fff !important;
+    border-top: 2px solid #ef4444 !important;
+    animation: pulse-red-bar 0.9s infinite alternate;
+  }
+  .state-p1-bar .p-tag { background: #fee2e2; color: #991b1b; }
+
+  @keyframes pulse-red-bar { from { background: #7f1d1d; } to { background: #dc2626; } }
+  @keyframes pulse-amber { 0%, 100% { opacity: 1; } 50% { opacity: 0.88; } }
+
+  /* ========================================================= */
+  /* MODAL DE CONFIGURACIÓN (TOGGLE DIRECTO AL PULSAR EL ESCUDO)*/
+  /* ========================================================= */
+  #config-modal {
+    display: none;
+    position: fixed;
+    bottom: 95px; left: 15px;
+    width: 390px;
+    background: rgba(11, 19, 32, 0.98);
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    padding: 18px;
+    z-index: 10000;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+    backdrop-filter: blur(10px);
+  }
+  .modal-title { color: var(--gold-bright); font-size: 14px; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #1e293b; padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-row { margin-bottom: 10px; }
+  .modal-row label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
+  .modal-row input, .modal-row select { width: 100%; padding: 7px; background: #152238; border: 1px solid #233857; color: #fff; border-radius: 4px; font-size: 12px; }
+
+  .btn-power-off {
+    width: 100%;
+    margin-top: 14px;
+    padding: 9px;
+    background: #7f1d1d;
+    border: 1px solid #ef4444;
+    color: #fff;
+    border-radius: 4px;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s;
+  }
+  .btn-power-off:hover { background: #991b1b; }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA EN MODO STAND-BY / APAGADA -->
+<div id="standby-screen">
+  <div>COMBÉS PANTALLA PASILLO EN REPOSO</div>
+  <div class="wake-hint" onclick="wakeApp()">Tocar la pantalla para encender</div>
+</div>
+
+<!-- CONTENEDOR PANTALLA PASILLO -->
+<div id="screen-container">
+
+  <!-- FONDO: VÍDEO YOUTUBE EN BUCLE INFINITO (PRUEBAS) -->
+  <div id="video-wrapper">
+    <!-- Vídeo institucional de la Armada / Operaciones navales en bucle, muteado y autoplay -->
+    <iframe id="yt-player" 
+      src="https://www.youtube-nocookie.com/embed/5qap5aO4i9A?autoplay=1&mute=1&controls=0&loop=1&playlist=5qap5aO4i9A&modestbranding=1&rel=0&showinfo=0&disablekb=1&fs=0&iv_load_policy=3"
+      allow="autoplay; encrypted-media" 
+      allowfullscreen>
+    </iframe>
+  </div>
+  <div id="video-shade"></div>
+
+  <!-- BANDA INFERIOR: ESCUDO ATALANTA (IZQ) + HORA MILITAR + BARRA DE MENSAJES -->
+  <div id="bottom-mast-bar">
+    
+    <!-- ESQUINA INFERIOR IZQUIERDA: ESCUDO EUNAVFOR ATALANTA (TOGGLE AJUSTES) -->
+    <div id="unit-crest-container" onclick="toggleConfigModal()" title="Pulsar el escudo de Atalanta para abrir/cerrar ajustes">
+      <svg class="crest-svg" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill="#003399" stroke="#d4af37" stroke-width="2.5"/>
+        <path d="M 38 35 Q 46 32 56 35 Q 67 37 72 46 Q 75 55 65 60 Q 58 63 55 73 Q 47 71 43 65 Q 36 58 38 35 Z" fill="#0a1a38" stroke="#ffd700" stroke-width="1.2"/>
+        <line x1="30" y1="70" x2="70" y2="30" stroke="#ffd700" stroke-width="3" stroke-linecap="round"/>
+        <line x1="50" y1="30" x2="50" y2="68" stroke="#ffffff" stroke-width="2"/>
+        <circle cx="50" cy="27" r="3.5" fill="none" stroke="#ffffff" stroke-width="1.8"/>
+        <path d="M 39 57 Q 50 70 61 57" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <g fill="#ffd700">
+          <circle cx="50" cy="11" r="2"/><circle cx="69" cy="16" r="2"/><circle cx="82" cy="30" r="2"/>
+          <circle cx="87" cy="50" r="2"/><circle cx="82" cy="70" r="2"/><circle cx="69" cy="84" r="2"/>
+          <circle cx="50" cy="89" r="2"/><circle cx="31" cy="84" r="2"/><circle cx="18" cy="70" r="2"/>
+          <circle cx="13" cy="50" r="2"/><circle cx="18" cy="30" r="2"/><circle cx="31" cy="16" r="2"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- HORA NAVAL REGLAMENTARIA: HH:MM:SS Letra Huso -->
+    <div id="ship-clock-badge">
+      <div class="time-naval" id="naval-clock">19:47:00 C</div>
+      <div class="time-zone-sub" id="nav-zone-label">HORA CHARLIE (+3)</div>
+    </div>
+
+    <!-- BARRA DE MENSAJES / CINTILLO -->
+    <div id="marquee-track-container">
+      
+      <!-- PISTA DE REPOSO (Noticiero continuo / Efemérides) -->
+      <div id="normal-ticker">
+        <span>[EUNAVFOR ATALANTA] Monitorización continua del corredor de tránsito recomendado (IRTC) en el Golfo de Adén</span>
+        <span class="ticker-bullet">•</span>
+        <span>[TELETEXTO TVE] La Armada completa con éxito las maniobras combinadas en aguas internacionales</span>
+        <span class="ticker-bullet">•</span>
+        <span>[RÉGIMEN] Menú de cena: Crema castellana, merluza a la vasca y fruta del tiempo</span>
+        <span class="ticker-bullet">•</span>
+        <span>[EFEMÉRIDES] Tal día como hoy en 1797 la escuadra española repele el ataque británico en Tenerife</span>
+        <span class="ticker-bullet">•</span>
+        <span>[DETALL] Orden del Día: Mañana a las 08:00 izado solemne en puerto de recalada</span>
+        <span class="ticker-bullet">•</span>
+        <span>[EUNAVFOR ATALANTA] Monitorización continua del corredor de tránsito recomendado (IRTC) en el Golfo de Adén</span>
+        <span class="ticker-bullet">•</span>
+        <span>[TELETEXTO TVE] La Armada completa con éxito las maniobras combinadas en aguas internacionales</span>
+      </div>
+
+      <!-- PISTA DE AVISO ACTIVO INYECTADO (P1 / P2 / P3) -->
+      <div id="priority-banner">
+        <span class="p-tag" id="banner-tag">P3 • ORDEN</span>
+        <span class="p-text" id="banner-text">AVISO DE MANDO</span>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- MODAL DE CONFIGURACIÓN DE PANTALLA (TOGGLE DIRECTO AL PULSAR EL ESCUDO) -->
+<div id="config-modal">
+  <div class="modal-title">
+    <span>⚙️ AJUSTES PANTALLA PASILLO</span>
+    <button onclick="toggleConfigModal()" style="background:none; border:none; color:#fff; cursor:pointer; font-size:16px;">✕</button>
+  </div>
+  <div class="modal-row">
+    <label>ID de Pantalla / Ubicación</label>
+    <input type="text" id="cfg-screen-id" value="PANT-PASILLO-CUBIERTA-02">
+  </div>
+  <div class="modal-row">
+    <label>Huso Horario Buque</label>
+    <select id="cfg-timezone" onchange="setTimezoneZone(this.value)">
+      <option value="C" selected>Charlie / Cuerno de África - Atalanta (+3) • Letra C</option>
+      <option value="Z">Zulu / UTC (+0) • Letra Z</option>
+      <option value="A">Alfa / Península Invierno (+1) • Letra A</option>
+      <option value="B">Bravo / Península Verano (+2) • Letra B</option>
+    </select>
+  </div>
+  <div class="modal-row">
+    <label>ID Vídeo YouTube (Pruebas)</label>
+    <input type="text" id="cfg-yt-id" value="5qap5aO4i9A" onchange="changeYoutubeVideo(this.value)">
+  </div>
+  <div class="modal-row">
+    <label>IP Servidor Buque / Origen Datos</label>
+    <input type="text" value="192.168.10.5">
+  </div>
+
+  <button class="btn-power-off" onclick="shutdownApp()">
+    <span>⏻</span> APAGAR / SALIR DE LA APLICACIÓN
+  </button>
+  <div style="font-size:10px; color:#94a3b8; margin-top:8px; text-align:center;">
+    * Pulsa de nuevo sobre el escudo de Atalanta para cerrar este menú.
+  </div>
+</div>
+
+<script>
+  let currentZoneLetter = 'C';
+  let zoneOffsetHours = 3;
+
+  // 1. CANAL DE SINCRONIZACIÓN EN TIEMPO REAL CON LA CONSOLA DEL OOW
+  // Permite que la app del Oficial de Guardia (en otra pestaña o dispositivo) controle esta pantalla al segundo
+  const syncChannel = new BroadcastChannel('combes_naval_net');
+  syncChannel.onmessage = (event) => {
+    const data = event.data;
+    if (!data) return;
+    if (data.action === 'INJECT_ORDER') {
+      showOrder(data.level, data.tag, data.text);
+    } else if (data.action === 'STOP_ORDER') {
+      clearOrder();
+    }
+  };
+
+  // Escuchar también almacenamiento compartido (localStorage) por si se prueba en navegadores sin soporte BroadcastChannel
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'combes_active_order') {
+      if (!e.newValue) {
+        clearOrder();
+      } else {
+        const order = JSON.parse(e.newValue);
+        showOrder(order.level, order.tag, order.text);
+      }
+    }
+  });
+
+  // 2. TOGGLE AJUSTES EN EL ESCUDO
+  function toggleConfigModal() {
+    const modal = document.getElementById('config-modal');
+    modal.style.display = (modal.style.display === 'block') ? 'none' : 'block';
+  }
+
+  function shutdownApp() {
+    toggleConfigModal();
+    document.getElementById('standby-screen').style.display = 'flex';
+  }
+
+  function wakeApp() {
+    document.getElementById('standby-screen').style.display = 'none';
+  }
+
+  function changeYoutubeVideo(videoId) {
+    const iframe = document.getElementById('yt-player');
+    const cleanId = videoId.trim();
+    iframe.src = `https://www.youtube-nocookie.com/embed/${cleanId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${cleanId}&modestbranding=1&rel=0&showinfo=0&disablekb=1&fs=0&iv_load_policy=3`;
+  }
+
+  function setTimezoneZone(zone) {
+    currentZoneLetter = zone;
+    if (zone === 'C') zoneOffsetHours = 3;
+    else if (zone === 'Z') zoneOffsetHours = 0;
+    else if (zone === 'A') zoneOffsetHours = 1;
+    else if (zone === 'B') zoneOffsetHours = 2;
+    document.getElementById('nav-zone-label').innerText = `HORA HUSO (${zone})`;
+    updateNavalClock();
+  }
+
+  // 3. RELOJ NAVAL REGLAMENTARIO: HH:MM:SS Letra Huso
+  function updateNavalClock() {
+    const now = new Date();
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const targetTime = new Date(utcTime + (3600000 * zoneOffsetHours));
+    const h = String(targetTime.getHours()).padStart(2, '0');
+    const m = String(targetTime.getMinutes()).padStart(2, '0');
+    const s = String(targetTime.getSeconds()).padStart(2, '0');
+    document.getElementById('naval-clock').innerText = `${h}:${m}:${s} ${currentZoneLetter}`;
+  }
+  setInterval(updateNavalClock, 1000);
+  updateNavalClock();
+
+  // 4. CONTROL DE MARQUESINA / ÓRDENES EN PANTALLA
+  function showOrder(level, tag, text) {
+    const banner = document.getElementById('priority-banner');
+    const bannerTag = document.getElementById('banner-tag');
+    const bannerText = document.getElementById('banner-text');
+    const normalTicker = document.getElementById('normal-ticker');
+
+    banner.className = '';
+    bannerTag.innerText = tag;
+    bannerText.innerText = text;
+
+    if (level === 'P1') {
+      banner.classList.add('state-p1-bar');
+    } else if (level === 'P2') {
+      banner.classList.add('state-p2');
+    } else if (level === 'P3') {
+      banner.classList.add('state-p3');
+    }
+
+    banner.style.display = 'flex';
+    normalTicker.style.display = 'none';
+  }
+
+  function clearOrder() {
+    const banner = document.getElementById('priority-banner');
+    const normalTicker = document.getElementById('normal-ticker');
+    banner.style.display = 'none';
+    banner.className = '';
+    normalTicker.style.display = 'flex';
+  }
+</script>
+
+</body>
+</html>
